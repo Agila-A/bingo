@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+    <!-- test deploy -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Multiplayer Bingo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary: #FF4081; /* Bubbly Pink */
+            --secondary: #00E5FF; /* Cyan */
+            --bg: #FFF3E0; /* Light orange-yellow bg */
+            --card-bg: #FFFFFF;
+            --text-main: #212121;
+            --font-head: 'Fredoka One', cursive;
+            --font-body: 'Nunito', sans-serif;
+            --gold: #FFD54F;
+            --green: #00E676;
+            --border-thick: 4px solid #111;
+            --shadow-solid: 4px 6px 0px #111;
+            --shadow-hover: 2px 3px 0px #111;
+        }
+        body { 
+            font-family: var(--font-body); 
+            background: var(--bg); 
+            background-image: radial-gradient(#FFCC80 20%, transparent 20%), radial-gradient(#FFCC80 20%, transparent 20%);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            color: var(--text-main); 
+            margin: 0; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; 
+            min-height: 100vh; overflow-x: hidden;
+        }
+        h1, h2, h3 { 
+            font-family: var(--font-head); 
+            margin: 0 0 15px 0; 
+            color: var(--primary); 
+            -webkit-text-stroke: 2px #111; 
+            text-shadow: 3px 4px 0px #111;
+            letter-spacing: 2px;
+        }
+        h1 { color: var(--gold); font-size: 4rem !important; }
+        h2 { color: var(--secondary); font-size: 2rem; }
+        h3 { color: var(--primary); }
+
+        .view-container { 
+            background: var(--card-bg); 
+            padding: 30px; 
+            border-radius: 20px; 
+            border: var(--border-thick);
+            box-shadow: var(--shadow-solid);
+            width: 100%; max-width: 500px;
+            text-align: center; display: none; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-sizing: border-box;
+            position: relative;
+        }
+        .active-view { display: block; }
+        
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        input, select, button { 
+            font-family: var(--font-head); font-size: 1.1rem; padding: 12px; margin: 10px 0; 
+            width: 100%; box-sizing: border-box; border-radius: 12px; border: var(--border-thick); outline: none;
+            transition: all 0.1s;
+        }
+        input, select { background: #fafafa; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); font-family: var(--font-body); font-weight: bold; }
+        input:focus, select:focus { border-color: var(--primary); background: white; }
+        
+        button { 
+            background: var(--primary); color: white; cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
+            box-shadow: var(--shadow-solid);
+            -webkit-text-stroke: 1px #111;
+        }
+        button:hover { filter: brightness(1.1); transform: translateY(-2px); box-shadow: 5px 8px 0px #111; }
+        button:active { transform: translateY(4px); box-shadow: 0px 2px 0px #111; }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; box-shadow: var(--shadow-solid); color: #888; -webkit-text-stroke: 0; }
+        
+        button.secondary { background: var(--secondary); }
+
+        .grid-container {
+            display: grid; gap: 8px; margin: 20px auto; 
+            width: 100%; max-width: 450px; 
+            padding: 10px; background: #eee; border-radius: 16px; border: var(--border-thick); box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .grid-cell {
+            background: var(--card-bg); border-radius: 12px; border: 3px solid #111; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; 
+            cursor: pointer; user-select: none; aspect-ratio: 1;
+            font-size: clamp(1.2rem, 5vw, 1.8rem); transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 4px 0 #111; font-family: var(--font-head);
+            position: relative;
+        }
+        .grid-cell:hover { transform: translateY(-3px); box-shadow: 0 7px 0 #111; }
+        .grid-cell:active { transform: translateY(2px); box-shadow: 0 2px 0 #111; }
+        .grid-cell.marked { 
+            background: var(--green); color: white; transform: translateY(4px); box-shadow: inset 0 4px 8px rgba(0,0,0,0.3), 0 0 0 #111;
+            -webkit-text-stroke: 1.5px #111; border-color: #111;
+        }
+        .grid-cell.marked::after {
+            content: '✔'; position: absolute; font-size: 2rem; color: rgba(255,255,255,0.4); pointer-events: none; -webkit-text-stroke: 0;
+        }
+        .grid-cell.free { background: var(--gold); color: white; -webkit-text-stroke: 1.5px #111; }
+        .grid-cell.selected { border-color: var(--primary); background: #ffebee; box-shadow: 0 0 0 4px var(--primary); }
+
+        .number-pool {
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-height: 250px; 
+            overflow-y: auto; padding: 15px; border: var(--border-thick); border-radius: 16px; background: var(--secondary);
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .pool-num {
+            width: 50px; height: 50px; background: white; border: 3px solid #111; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;
+            transition: all 0.1s; box-shadow: 0 4px 0 rgba(0,0,0,0.2); font-family: var(--font-head); font-size: 1.2rem;
+        }
+        .pool-num:hover { transform: scale(1.1) translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,0.2); }
+        .pool-num:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+        .pool-num.selected { background: var(--primary); color: white; transform: scale(1.15); box-shadow: 0 0 0 4px #111; }
+        .pool-num.used { opacity: 0.5; pointer-events: none; filter: grayscale(1); box-shadow: none; transform: translateY(4px); }
+
+        .feed {
+            height: 220px; overflow-y: auto; background: #fff; border-radius: 12px; padding: 10px; 
+            margin-top: 10px; text-align: left; font-size: 1rem; border: var(--border-thick); box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .feed p { 
+            margin: 6px 0; padding: 10px 15px; background: #f0f0f0; border-radius: 8px; border: 2px solid #111;
+            box-shadow: 2px 2px 0 #111; font-weight: bold; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        
+        .player-list { list-style: none; padding: 0; margin: 15px 0; }
+        .player-list li { 
+            margin: 10px 0; padding: 15px; background: white; border-radius: 12px; border: 3px solid #111;
+            box-shadow: 3px 3px 0 #111; display: flex; justify-content: space-between; align-items: center; font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .host-badge { background: var(--gold); color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 0.8em; font-family: var(--font-head); border: 2px solid #111; -webkit-text-stroke: 1px #111; }
+        
+        .overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); 
+            display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(5px);
+        }
+        .modal { 
+            background: var(--bg); padding: 40px; border-radius: 24px; max-width: 450px; width: 90%; text-align: center; 
+            border: var(--border-thick); box-shadow: 0 20px 0px rgba(0,0,0,0.4); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+
+        #turn-banner { 
+            position: fixed; top: 0; left: 0; width: 100%; background: var(--gold); color: white; 
+            padding: 15px; text-align: center; font-weight: bold; z-index: 100; transform: translateY(-100%); 
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); font-family: var(--font-head); font-size: 1.5rem;
+            border-bottom: var(--border-thick); box-shadow: 0 5px 15px rgba(0,0,0,0.2); box-sizing: border-box;
+            -webkit-text-stroke: 1.5px #111; letter-spacing: 1px;
+        }
+        #turn-banner.visible { transform: translateY(0); }
+
+        .gameplay-layout { display: flex; gap: 30px; flex-wrap: wrap; justify-content: center; width: 100%; align-items: flex-start; }
+        .gameplay-board-panel { flex: 1 1 400px; max-width: 500px; }
+        .gameplay-info-panel { flex: 1 1 300px; max-width: 450px; background: var(--card-bg); padding: 25px; border-radius: 20px; border: var(--border-thick); box-shadow: var(--shadow-solid); text-align: left; }
+    </style>
+</head>
+<body>
+
+<!-- 
+  No Backend Required - Realtime DB Structure Notes:
+  Since there is no authentication mechanism here, 
+  be sure your Firebase Realtime database rules are configured to:
+  {
+    "rules": {
+      ".read": true,
+      ".write": true
+    }
+  }
+-->
+
+<div id="turn-banner">Someone's turn...</div>
+
+<!-- Landing View -->
+<div id="landing-view" class="view-container active-view">
+    <h1 style="font-size: 3rem; margin-bottom: 5px;">BINGO</h1>
+    <p style="margin-top: 0; color: #888;">Real-time Multiplayer</p>
+    
+    <input id="player-name" placeholder="Enter your display name" maxlength="15">
+    <button id="btn-create-lobby">Create Room</button>
+    
+    <div style="margin: 25px 0; font-weight: bold; color: #aaa;">OR</div>
+    
+    <input id="room-code-input" placeholder="6-Char Room Code" maxlength="6" style="text-transform:uppercase; text-align: center; font-size: 1.2rem; font-weight: bold; letter-spacing: 2px;">
+    <button id="btn-join-lobby" class="secondary">Join Room</button>
+</div>
+
+<!-- Create Room View -->
+<div id="create-room-view" class="view-container">
+    <h2>Room Settings</h2>
+    <label style="display:block; text-align:left; font-weight:bold; margin-top:15px;">Grid Size
+        <select id="setting-grid">
+            <option value="3">3x3</option>
+            <option value="4">4x4</option>
+            <option value="5" selected>5x5</option>
+            <option value="6">6x6</option>
+            <option value="7">7x7</option>
+            <option value="8">8x8</option>
+            <option value="9">9x9</option>
+            <option value="10">10x10</option>
+        </select>
+    </label>
+    <div style="display:flex; gap:15px; margin-top:10px;">
+        <label style="flex:1; text-align:left; font-weight:bold;">Min Num
+            <input type="number" id="setting-min" value="1">
+        </label>
+        <label style="flex:1; text-align:left; font-weight:bold;">Max Num
+            <input type="number" id="setting-max" value="50">
+        </label>
+    </div>
+    <label style="display:block; text-align:left; font-weight:bold; margin-top:10px;">Max Players (2-6)
+        <input type="number" id="setting-players" value="4" min="2" max="6">
+    </label>
+    <button id="btn-confirm-create" style="margin-top:25px;">Generate Link</button>
+    <button id="btn-back-create" class="secondary">Back</button>
+</div>
+
+<!-- Lobby View -->
+<div id="lobby-view" class="view-container">
+    <h2 style="font-size: 2rem;">Room: <span id="lobby-code-display" style="color:var(--secondary);"></span></h2>
+    <p style="margin-bottom: 5px;">Share this link to invite others:</p>
+    <input type="text" id="share-link-input" readonly onclick="this.select()" style="background:#f9f9f9; text-align:center; color:#555;">
+    
+    <h3 style="margin-top: 25px;">Players</h3>
+    <ul id="lobby-players-list" class="player-list"></ul>
+    
+    <p id="lobby-wait-msg" style="color: #666; font-style: italic; margin-top: 20px;">Waiting for host to start...</p>
+    <button id="btn-start-game" style="display:none; margin-top: 20px;">Start Game</button>
+</div>
+
+<!-- Board Creation View -->
+<div id="board-creation-view" class="view-container" style="max-width: 600px;">
+    <h2>Create Your Board</h2>
+    <p id="board-creation-instructions">Click a number from the pool, then click an empty grid slot to place it.</p>
+    
+    <div id="creation-pool" class="number-pool"></div>
+    <div id="creation-grid" class="grid-container"></div>
+    
+    <button id="btn-lock-board" disabled style="margin-top: 20px;">Lock In Board</button>
+    <p id="lock-wait-msg" style="display:none; color: var(--primary); font-weight: bold; margin-top: 20px; font-size: 1.2rem;">Waiting for other players...</p>
+</div>
+
+<!-- Gameplay View -->
+<div id="gameplay-view" class="gameplay-layout" style="display: none;">
+    <div class="gameplay-board-panel view-container active-view" style="margin: 0; max-width: none;">
+        <h2 id="gameplay-title">Your Board</h2>
+        <p style="color:#666; margin-top: -10px;">Click cells to mark them as called!</p>
+        <div id="gameplay-grid" class="grid-container"></div>
+    </div>
+    
+    <div class="gameplay-info-panel">
+        <h3 style="margin-top: 0;">Live Feed</h3>
+        <div id="feed-container" class="feed"></div>
+        
+        <h3 style="margin-top: 20px;">Called Numbers</h3>
+        <p id="called-numbers-list" style="word-wrap: break-word; font-weight: bold; color: var(--secondary); background: #f0f0f0; padding: 10px; border-radius: 8px;"></p>
+        
+        <h3 style="margin-top: 20px;">Scoreboard</h3>
+        <ul id="game-players-list" class="player-list" style="font-size: 0.95em;"></ul>
+    </div>
+</div>
+
+<!-- Turn Modal -->
+<div id="turn-modal" class="overlay">
+    <div class="modal">
+        <h2 style="font-size: 2.2rem; margin-bottom: 5px;">YOUR TURN! 🎉</h2>
+        <p style="margin-top: 0; color: #666; margin-bottom: 25px;">Pick a valid number to call</p>
+        <select id="turn-number-select" style="font-size: 1.2rem; padding: 15px;"></select>
+        <button id="btn-call-number" style="margin-top: 20px; padding: 15px;">Call Number</button>
+    </div>
+</div>
+
+<!-- Win View -->
+<div id="win-view" class="view-container">
+    <h1 style="font-size: 4em; color: var(--primary); text-shadow: 2px 2px 0px rgba(0,0,0,0.1);">BINGO!</h1>
+    <h2 id="winner-name-display" style="color: var(--text-main); font-size: 2rem;"></h2>
+    <div style="margin-top: 40px;">
+        <button id="btn-play-again">Play Again</button>
+        <button id="btn-back-lobby" class="secondary">Leave Room</button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue, update, remove, onDisconnect, push } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
+    // Placeholder Configuration - Replace with your actual project details
+    const firebaseConfig = {
+        apiKey: "your irebase api key",
+        authDomain: "your authDomain",
+        projectId: "your projectId",
+        storageBucket: "your storageBucket",
+        messagingSenderId: "your messagingSenderId",
+        appId: "your appId",
+        // databaseURL is required since the database is in the asia-southeast1 region
+        databaseURL: "your databaseURL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Global App State
+    let state = {
+        uid: localStorage.getItem('bingo_uid') || Math.random().toString(36).substr(2, 9),
+        name: localStorage.getItem('bingo_name') || '',
+        roomId: null,
+        isHost: false,
+        roomData: null,
+        myPlayerRef: null,
+        roomRef: null,
+        
+        // Board creation state
+        generationPool: [],
+        selectedPoolNum: null,
+        usedPoolNums: new Set(),
+        myBoard: [], 
+        lockedIn: false,
+        
+        // Gameplay state
+        myMarks: []
+    };
+    
+    // Save generated UID explicitly
+    localStorage.setItem('bingo_uid', state.uid);
+
+    // DOM Helpers
+    const DOM = {
+        views: {
+            landing: document.getElementById('landing-view'),
+            createRoom: document.getElementById('create-room-view'),
+            lobby: document.getElementById('lobby-view'),
+            boardCreation: document.getElementById('board-creation-view'),
+            gameplay: document.getElementById('gameplay-view'),
+            win: document.getElementById('win-view')
+        }
+    };
+
+    function showView(viewId) {
+        Object.values(DOM.views).forEach(v => {
+            v.classList.remove('active-view');
+            v.style.display = ''; // Let CSS handle the hiding
+        });
+        
+        if (viewId === 'gameplay') {
+            DOM.views.gameplay.style.display = 'flex';
+            DOM.views.gameplay.classList.add('active-view');
+        } else {
+            DOM.views[viewId].classList.add('active-view');
+        }
+    }
+
+    let currentRoomStatus = null;
+
+    // View Transitions Controller
+    function handleRoomUpdate(data) {
+        state.roomData = data;
+        const status = data.gameState.status; 
+        
+        if (status !== currentRoomStatus) {
+            currentRoomStatus = status;
+            
+            if (status === 'lobby') {
+                showView('lobby');
+            } else if (status === 'boarding') {
+                state.lockedIn = false;
+                startBoardCreation();
+            } else if (status === 'playing') {
+                startGameplay();
+            } else if (status === 'ended') {
+                showWinScreen();
+            }
+        }
+        
+        // Update data for active view
+        if (status === 'lobby') updateLobbyUI();
+        if (status === 'boarding') updateBoardingUI();
+        if (status === 'playing') updateGameplayUI();
+    }
+
+    // --- 1. LOBBY & INITIALIZATION ROUTINES ---
+
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('room');
+        if (code) {
+            document.getElementById('room-code-input').value = code;
+        }
+        document.getElementById('player-name').value = state.name;
+        document.getElementById('player-name').oninput = e => {
+            state.name = e.target.value.trim();
+            localStorage.setItem('bingo_name', state.name);
+        };
+    };
+
+    document.getElementById('btn-create-lobby').onclick = () => {
+        state.name = document.getElementById('player-name').value.trim();
+        if (!state.name) return alert("Please enter your display name first!");
+        showView('createRoom');
+    };
+
+    document.getElementById('btn-join-lobby').onclick = () => {
+        state.name = document.getElementById('player-name').value.trim();
+        let code = document.getElementById('room-code-input').value.trim().toUpperCase();
+        if (!state.name || !code) return alert("Please enter both your name and the Room Code!");
+        joinRoom(code);
+    };
+
+    document.getElementById('btn-back-create').onclick = () => showView('landing');
+    document.getElementById('btn-back-lobby').onclick = () => window.location.href = window.location.origin + window.location.pathname;
+
+    document.getElementById('btn-confirm-create').onclick = async () => {
+        const sz = parseInt(document.getElementById('setting-grid').value);
+        const min = parseInt(document.getElementById('setting-min').value);
+        const max = parseInt(document.getElementById('setting-max').value);
+        const pMax = parseInt(document.getElementById('setting-players').value);
+        
+        const reqNums = sz * sz - (sz % 2 !== 0 ? 1 : 0);
+        if (max - min + 1 < reqNums) {
+            return alert(`Error: Number range (${min}-${max}) does not contain enough unique numbers for a ${sz}x${sz} board! Minimum needed: ${reqNums}.`);
+        }
+        
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const initData = {
+            config: {
+                gridSize: sz, minNum: min, maxNum: max, 
+                bingosToWin: Math.min(sz, 5), maxPlayers: pMax
+            },
+            players: {
+                [state.uid]: {
+                    uid: state.uid, name: state.name, isHost: true, joinTime: Date.now()
+                }
+            },
+            gameState: {
+                status: 'lobby'
+            }
+        };
+        
+        await set(ref(db, `rooms/${code}`), initData);
+        joinRoom(code);
+    };
+
+    async function joinRoom(code) {
+        state.roomRef = ref(db, `rooms/${code}`);
+        const snapshot = await get(state.roomRef);
+        
+        if (!snapshot.exists()) {
+            return alert("Room not found! Check the code and try again.");
+        }
+        
+        const data = snapshot.val();
+        const players = data.players || {};
+        const isRejoining = !!players[state.uid];
+        
+        if (data.gameState.status !== 'lobby' && !isRejoining) {
+            return alert("Game is already in progress and you are not a participant!");
+        }
+        
+        if (!isRejoining && Object.keys(players).length >= data.config.maxPlayers) {
+            return alert("Room is currently full!");
+        }
+        
+        state.roomId = code;
+        state.isHost = players[state.uid]?.isHost || false;
+        state.myPlayerRef = ref(db, `rooms/${code}/players/${state.uid}`);
+        
+        // Publish presence
+        await set(state.myPlayerRef, {
+            uid: state.uid,
+            name: state.name,
+            isHost: state.isHost,
+            joinTime: players[state.uid]?.joinTime || Date.now(),
+            board: players[state.uid]?.board || [],
+            markedCells: players[state.uid]?.markedCells || [],
+            lockedIn: players[state.uid]?.lockedIn || false,
+            bingoCount: players[state.uid]?.bingoCount || 0
+        });
+        
+        // Handle unexpected disconnects
+        if (state.isHost) {
+            onDisconnect(state.roomRef).remove(); // Room dissolves if host leaves
+        } else {
+            onDisconnect(state.myPlayerRef).remove(); // Player drops out
+        }
+        
+        // Main live listener
+        onValue(state.roomRef, (snap) => {
+            const rd = snap.val();
+            if (!rd) {
+                alert("The host has left or the room was dissolved.");
+                window.location.href = window.location.origin + window.location.pathname;
+                return;
+            }
+            handleRoomUpdate(rd);
+        });
+    }
+
+    function updateLobbyUI() {
+        document.getElementById('lobby-code-display').innerText = state.roomId;
+        let link = window.location.origin + window.location.pathname + '?room=' + state.roomId;
+        document.getElementById('share-link-input').value = link;
+        
+        const pList = document.getElementById('lobby-players-list');
+        pList.innerHTML = '';
+        const players = state.roomData.players || {};
+        let pCount = 0;
+        
+        Object.values(players).sort((a,b) => a.joinTime - b.joinTime).forEach(p => {
+            let li = document.createElement('li');
+            li.innerHTML = `<span>${p.name}</span>${p.isHost ? '<span class="host-badge">HOST</span>' : ''}`;
+            pList.appendChild(li);
+            pCount++;
+        });
+        
+        const waitMsg = document.getElementById('lobby-wait-msg');
+        const startBtn = document.getElementById('btn-start-game');
+        
+        if (state.isHost) {
+            waitMsg.style.display = 'none';
+            startBtn.style.display = 'inline-block';
+            startBtn.disabled = pCount < 2;
+        } else {
+            waitMsg.style.display = 'block';
+            startBtn.style.display = 'none';
+        }
+    }
+
+    document.getElementById('btn-start-game').onclick = () => {
+        update(ref(db, `rooms/${state.roomId}/gameState`), { status: 'boarding' });
+    };
+
+    // --- 2. BOARD CREATION PHASE ---
+
+    function startBoardCreation() {
+        showView('boardCreation');
+        const { gridSize, minNum, maxNum } = state.roomData.config;
+        const playerMe = state.roomData.players[state.uid];
+        
+        if (playerMe && playerMe.board && playerMe.board.length > 0) {
+            state.myBoard = playerMe.board;
+            if (playerMe.lockedIn) {
+                state.lockedIn = true;
+                renderBoardCreation();
+                return;
+            }
+        } else {
+            let requiredSize = gridSize * gridSize;
+            let hasFree = gridSize % 2 !== 0;
+            if (hasFree) requiredSize -= 1;
+            
+            // Gen Shuffled Pool
+            let all = [];
+            for (let i = minNum; i <= maxNum; i++) all.push(i);
+            for (let i = all.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [all[i], all[j]] = [all[j], all[i]];
+            }
+            state.generationPool = all.slice(0, requiredSize);
+            
+            state.usedPoolNums.clear();
+            state.selectedPoolNum = null;
+            state.myBoard = new Array(gridSize * gridSize).fill(null);
+            
+            if (hasFree) {
+                let center = Math.floor(gridSize * gridSize / 2);
+                state.myBoard[center] = "FREE";
+                state.myMarks = new Array(gridSize * gridSize).fill(false);
+                state.myMarks[center] = true;
+            } else {
+                state.myMarks = new Array(gridSize * gridSize).fill(false);
+            }
+        }
+        renderBoardCreation();
+    }
+
+    function renderBoardCreation() {
+        const { gridSize } = state.roomData.config;
+        const gridEl = document.getElementById('creation-grid');
+        gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+        gridEl.innerHTML = '';
+        
+        let isFull = true;
+        
+        for (let i = 0; i < state.myBoard.length; i++) {
+            let cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            
+            let val = state.myBoard[i];
+            if (val === "FREE") {
+                cell.innerText = "★";
+                cell.classList.add('free');
+            } else if (val !== null) {
+                cell.innerText = val;
+                cell.onclick = () => { if (!state.lockedIn) returnToPool(i); };
+            } else {
+                isFull = false;
+                cell.onclick = () => placeFromPool(i);
+                if (state.selectedPoolNum !== null) cell.style.cursor = 'pointer';
+            }
+            gridEl.appendChild(cell);
+        }
+        
+        const poolEl = document.getElementById('creation-pool');
+        poolEl.innerHTML = '';
+        
+        if (!state.lockedIn) {
+            document.getElementById('board-creation-instructions').style.display = 'block';
+            state.generationPool.sort((a,b)=>a-b).forEach(num => {
+                let el = document.createElement('div');
+                el.className = 'pool-num';
+                if (state.usedPoolNums.has(num)) {
+                    el.classList.add('used');
+                    el.innerText = num;
+                } else {
+                    el.innerText = num;
+                    if (state.selectedPoolNum === num) el.classList.add('selected');
+                    el.onclick = () => { state.selectedPoolNum = num; renderBoardCreation(); };
+                }
+                poolEl.appendChild(el);
+            });
+            
+            let btn = document.getElementById('btn-lock-board');
+            btn.disabled = !isFull;
+            btn.style.display = 'block';
+            document.getElementById('lock-wait-msg').style.display = 'none';
+        } else {
+            poolEl.style.display = 'none';
+            document.getElementById('board-creation-instructions').style.display = 'none';
+            document.getElementById('btn-lock-board').style.display = 'none';
+            document.getElementById('lock-wait-msg').style.display = 'block';
+        }
+    }
+
+    function placeFromPool(index) {
+        if (state.selectedPoolNum === null) return;
+        state.myBoard[index] = state.selectedPoolNum;
+        state.usedPoolNums.add(state.selectedPoolNum);
+        state.selectedPoolNum = null;
+        renderBoardCreation();
+    }
+
+    function returnToPool(index) {
+        let val = state.myBoard[index];
+        if (val === null || val === "FREE") return;
+        state.usedPoolNums.delete(val);
+        state.myBoard[index] = null;
+        renderBoardCreation();
+    }
+
+    document.getElementById('btn-lock-board').onclick = () => {
+        state.lockedIn = true;
+        update(ref(db, `rooms/${state.roomId}/players/${state.uid}`), {
+            board: state.myBoard,
+            markedCells: state.myMarks,
+            lockedIn: true,
+            bingoCount: 0
+        });
+        renderBoardCreation();
+    };
+
+    function updateBoardingUI() {
+        let allLocked = Object.values(state.roomData.players).every(p => p.lockedIn);
+        // Only host initiates transition to avoid race conditions
+        if (state.isHost && allLocked && Object.keys(state.roomData.players).length >= 2) {
+            let playersList = Object.values(state.roomData.players).sort((a,b) => a.joinTime - b.joinTime);
+            let firstUid = playersList[0].uid;
+            
+            update(ref(db, `rooms/${state.roomId}/gameState`), {
+                status: 'playing',
+                currentTurn: firstUid,
+                calledNumbers: []
+            });
+            push(ref(db, `rooms/${state.roomId}/gameState/feed`), { 
+                text: "🎲 The Game Has Started! First turn going up...", ts: Date.now() 
+            });
+        }
+    }
+
+    // --- 3. GAMEPLAY ---
+
+    function startGameplay() {
+        showView('gameplay');
+        const playerMe = state.roomData.players[state.uid];
+        state.myBoard = playerMe.board || [];
+        state.myMarks = playerMe.markedCells || new Array(state.roomData.config.gridSize * state.roomData.config.gridSize).fill(false);
+        updateGameplayUI();
+    }
+
+    function updateGameplayUI() {
+        const { gameState, config, players } = state.roomData;
+        
+        // 1. Live Feed
+        const feedEl = document.getElementById('feed-container');
+        feedEl.innerHTML = '';
+        if (gameState.feed) {
+            const msgs = Object.values(gameState.feed).sort((a,b) => a.ts - b.ts);
+            for (const m of msgs) {
+                let p = document.createElement('p');
+                p.innerText = m.text;
+                feedEl.appendChild(p);
+            }
+            feedEl.scrollTop = feedEl.scrollHeight;
+        }
+        
+        // 2. Called Numbers List
+        document.getElementById('called-numbers-list').innerText = (gameState.calledNumbers || []).join(', ');
+        
+        // 3. Scoreboard
+        const pList = document.getElementById('game-players-list');
+        pList.innerHTML = '';
+        Object.values(players).sort((a,b) => a.joinTime - b.joinTime).forEach(p => {
+            let li = document.createElement('li');
+            let text = `${p.name} - Bingos: ${p.bingoCount || 0}/${config.bingosToWin}`;
+            if (p.uid === gameState.currentTurn) text = "👉 " + text;
+            li.innerHTML = text;
+            pList.appendChild(li);
+        });
+        
+        // 4. Board Output
+        renderGameplayBoard();
+        
+        // 5. Turn Management
+        const turnBanner = document.getElementById('turn-banner');
+        const modal = document.getElementById('turn-modal');
+        
+        if (gameState.currentTurn === state.uid) {
+            turnBanner.classList.remove('visible');
+            if (modal.style.display !== 'flex') {
+                showTurnModal();
+            }
+        } else {
+            modal.style.display = 'none';
+            let activePlayer = players[gameState.currentTurn]?.name || 'Someone';
+            turnBanner.innerText = `Waiting on ${activePlayer} to call a number...`;
+            turnBanner.classList.add('visible');
+        }
+    }
+
+    function renderGameplayBoard() {
+        const gridEl = document.getElementById('gameplay-grid');
+        const { gridSize } = state.roomData.config;
+        gridEl.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+        gridEl.innerHTML = '';
+        
+        let calledNums = state.roomData.gameState.calledNumbers || [];
+        
+        for (let i = 0; i < state.myBoard.length; i++) {
+            let cell = document.createElement('div');
+            cell.className = 'grid-cell';
+            let val = state.myBoard[i];
+            
+            if (val === "FREE") {
+                cell.innerText = "★";
+                cell.classList.add('free');
+            } else {
+                cell.innerText = val;
+                if (state.myMarks[i]) {
+                    cell.classList.add('marked');
+                } else if (calledNums.includes(val)) {
+                    cell.style.borderColor = "var(--primary)"; // hint that it was called
+                }
+            }
+            
+            cell.onclick = () => toggleMark(i);
+            gridEl.appendChild(cell);
+        }
+    }
+
+    function showTurnModal() {
+        let { minNum, maxNum } = state.roomData.config;
+        let called = state.roomData.gameState.calledNumbers || [];
+        let sel = document.getElementById('turn-number-select');
+        sel.innerHTML = '<option value="">-- Choose Wisely --</option>';
+        
+        for (let i = minNum; i <= maxNum; i++) {
+            if (!called.includes(i)) {
+                 let opt = document.createElement('option');
+                 opt.value = i; opt.innerText = i;
+                 sel.appendChild(opt);
+            }
+        }
+        document.getElementById('turn-modal').style.display = 'flex';
+    }
+
+    document.getElementById('btn-call-number').onclick = () => {
+        const selector = document.getElementById('turn-number-select');
+        const val = parseInt(selector.value);
+        if (!val) return alert("Select a number first!");
+        
+        let gameState = state.roomData.gameState;
+        let called = gameState.calledNumbers || [];
+        called.push(val);
+        
+        let playersList = Object.values(state.roomData.players).sort((a,b) => a.joinTime - b.joinTime);
+        let myIndex = playersList.findIndex(p => p.uid === state.uid);
+        let nextIndex = (myIndex + 1) % playersList.length;
+        
+        let updates = {
+            'gameState/calledNumbers': called,
+            'gameState/currentTurn': playersList[nextIndex].uid
+        };
+        update(ref(db, `rooms/${state.roomId}`), updates);
+        push(ref(db, `rooms/${state.roomId}/gameState/feed`), { text: `📣 ${state.name} called out: ${val}!`, ts: Date.now() });
+        
+        document.getElementById('turn-modal').style.display = 'none';
+    };
+
+    function toggleMark(index) {
+        let val = state.myBoard[index];
+        if (val === "FREE") return; 
+
+        let calledNums = state.roomData.gameState.calledNumbers || [];
+        if (!calledNums.includes(val)) {
+            return alert("Hold on! That number hasn't been called yet.");
+        }
+        
+        state.myMarks[index] = !state.myMarks[index];
+        
+        // Sync marks
+        update(ref(db, `rooms/${state.roomId}/players/${state.uid}`), {
+            markedCells: state.myMarks
+        });
+        
+        checkWinCondition();
+    }
+
+    function countBingos(marks, size) {
+        let bingos = 0;
+        // Force evaluation of sparse marks to absolute booleans
+        let solidMarks = [];
+        for(let i = 0; i < size * size; i++) {
+            solidMarks[i] = !!marks[i];
+        }
+        if (size % 2 !== 0) solidMarks[Math.floor((size*size)/2)] = true; // Auto-secure FREE space
+
+        // Rows
+        for (let r=0; r<size; r++) {
+            let win = true;
+            for (let c=0; c<size; c++) { if (!solidMarks[r*size + c]) win = false; }
+            if (win) bingos++;
+        }
+        // Columns
+        for (let c=0; c<size; c++) {
+            let win = true;
+            for (let r=0; r<size; r++) { if (!solidMarks[r*size + c]) win = false; }
+            if (win) bingos++;
+        }
+        // Diag 1
+        let win1 = true;
+        for (let i=0; i<size; i++) { if (!solidMarks[i*size + i]) win1 = false; }
+        if (win1) bingos++;
+        
+        // Diag 2
+        let win2 = true;
+        for (let i=0; i<size; i++) { if (!solidMarks[i*size + (size - 1 - i)]) win2 = false; }
+        if (win2) bingos++;
+        
+        return bingos;
+    }
+
+    function checkWinCondition() {
+        const { gridSize, bingosToWin } = state.roomData.config;
+        let bCount = countBingos(state.myMarks, gridSize);
+        let oldBCount = state.roomData.players[state.uid].bingoCount || 0;
+        
+        if (bCount > oldBCount) {
+             // Explicitly tell the user!
+             if (window.confetti) confetti({ particleCount: 50, spread: 40 });
+        }
+
+        if (bCount !== oldBCount) {
+            update(ref(db, `rooms/${state.roomId}/players/${state.uid}`), { bingoCount: bCount });
+            if (bCount > oldBCount) {
+                let diff = bCount - oldBCount;
+                for (let k=0; k<diff; k++) {
+                    push(ref(db, `rooms/${state.roomId}/gameState/feed`), { 
+                        text: `🎉 BINGO! ${state.name} completed a line! (${bCount}/${bingosToWin})`, ts: Date.now() 
+                    });
+                }
+            }
+        }
+        
+        if (bCount >= bingosToWin) {
+            push(ref(db, `rooms/${state.roomId}/gameState/feed`), { 
+                text: `🏆 ${state.name} HAS WON THE GAME!`, ts: Date.now() + 10 
+            });
+            update(ref(db, `rooms/${state.roomId}/gameState`), {
+                status: 'ended',
+                winner: state.name
+            });
+        }
+    }
+
+    // --- 4. END GAME ---
+
+    function showWinScreen() {
+        showView('win');
+        document.getElementById('turn-banner').classList.remove('visible');
+        const winner = state.roomData.gameState.winner;
+        document.getElementById('winner-name-display').innerText = `${winner} won the game!`;
+        
+        if (window.confetti) {
+            confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+        }
+        
+        document.getElementById('btn-play-again').style.display = state.isHost ? 'inline-block' : 'none';
+    }
+
+    document.getElementById('btn-play-again').onclick = async () => {
+        if (!state.isHost) return;
+        
+        let ops = {};
+        Object.keys(state.roomData.players).forEach(uid => {
+            ops[`players/${uid}/board`] = [];
+            ops[`players/${uid}/lockedIn`] = false;
+            ops[`players/${uid}/markedCells`] = [];
+            ops[`players/${uid}/bingoCount`] = 0;
+        });
+        ops[`gameState/status`] = 'boarding';
+        ops[`gameState/winner`] = null;
+        ops[`gameState/calledNumbers`] = [];
+        ops[`gameState/feed`] = null;
+        ops[`gameState/currentTurn`] = null;
+        
+        await update(ref(db, `rooms/${state.roomId}`), ops);
+    };
+
+</script>
+</body>
+</html>
