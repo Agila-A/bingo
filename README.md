@@ -1,5 +1,7 @@
 # 🎱 BINGO GAME
 
+TRY IT FOR FREE - https://bingo-game-01.vercel.app/
+
 > *"i just wanted to play bingo with my friends through online and I didn't find any free website that suited my taste, so yea I made one* - what boredom does to a person
 
 ---
@@ -14,7 +16,7 @@ okay so you know how bingo is super fun but like... every online version is eith
 
 yeah. **so i built my own.** it took a while. it works. mostly. 
 
-I was inspired by skribble.io so I made this bingo — you create a room, send the link to your friends, everyone makes their own board, and you take turns calling numbers. no login. no nonsense. just vibes and bingo.
+I was inspired by skribble.io so I made this bingo - you create a room, send the link to your friends, everyone makes their own board, and you take turns calling numbers. no login. no nonsense. just bingo.
 
 ---
 
