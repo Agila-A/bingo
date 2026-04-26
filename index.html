@@ -50,7 +50,7 @@
             font-family: var(--font-head);
             margin: 0 0 15px 0;
             color: var(--primary);
-            -webkit-text-stroke: 2px #111;
+            -webkit-text-stroke: 1px #111;
             text-shadow: 3px 4px 0px #111;
             letter-spacing: 2px;
         }
@@ -58,6 +58,7 @@
         h1 {
             color: var(--gold);
             font-size: 4rem !important;
+            -webkit-text-stroke: 2px #111;
         }
 
         h2 {
@@ -546,6 +547,25 @@
         <input id="room-code-input" placeholder="6-Char Room Code" maxlength="6"
             style="text-transform:uppercase; text-align: center; font-size: 1.2rem; font-weight: bold; letter-spacing: 2px;">
         <button id="btn-join-lobby" class="secondary">Join Room</button>
+        <button id="btn-how-to-play" style="margin-top: 25px; background: #607d8b; border-color: #111;">How to Play
+            ❓</button>
+    </div>
+
+    <!-- How To Play Modal -->
+    <div id="how-to-play-modal" class="overlay">
+        <div class="modal" style="text-align: left;">
+            <h2 style="text-align: center; margin-top: 0;">How to Play Bingo</h2>
+            <ul style="line-height: 1.8; font-size: 1.1rem; padding-left: 20px;">
+                <li><strong>Create or Join:</strong> Start a room and share the code, or join a friend's room.</li>
+                <li><strong>Build Your Board:</strong> Pick numbers from the pool and place them on your grid. Lock it
+                    in when you're ready!</li>
+                <li><strong>Take Turns:</strong> When it's your turn, pick a number to call out to the room.</li>
+                <li><strong>Mark Your Board:</strong> Once the number is called the tile is automatically marked off the
+                    number!</li>
+                <li><strong>Win:</strong> Mark the lines to get a BINGO. Get enough Bingos to win the game!</li>
+            </ul>
+            <button id="btn-close-how-to" style="margin-top: 20px;">Got it!</button>
+        </div>
     </div>
 
     <!-- Create Room View -->
@@ -642,7 +662,8 @@
     <!-- Win View -->
     <div id="win-view" class="overlay">
         <div class="modal">
-            <h1 style="font-size: 4em; color: var(--primary); text-shadow: 2px 2px 0px rgba(0,0,0,0.1); margin-top: 0;">BINGO!</h1>
+            <h1 style="font-size: 4em; color: var(--primary); text-shadow: 2px 2px 0px rgba(0,0,0,0.1); margin-top: 0;">
+                BINGO!</h1>
             <h2 id="winner-name-display" style="color: var(--text-main); font-size: 2rem;"></h2>
             <div style="margin-top: 40px;">
                 <button id="btn-play-again">Play Again</button>
@@ -823,6 +844,14 @@
             document.getElementById('btn-hair-next').onclick = () => { currHair = (currHair + 1) % HAIRS.length; updateAvatarPreview(); };
 
             updateAvatarPreview();
+
+            // How To Play Handlers
+            document.getElementById('btn-how-to-play').onclick = () => {
+                document.getElementById('how-to-play-modal').style.display = 'flex';
+            };
+            document.getElementById('btn-close-how-to').onclick = () => {
+                document.getElementById('how-to-play-modal').style.display = 'none';
+            };
         };
 
         document.getElementById('btn-create-lobby').onclick = () => {
