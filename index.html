@@ -640,12 +640,14 @@
     </div>
 
     <!-- Win View -->
-    <div id="win-view" class="view-container">
-        <h1 style="font-size: 4em; color: var(--primary); text-shadow: 2px 2px 0px rgba(0,0,0,0.1);">BINGO!</h1>
-        <h2 id="winner-name-display" style="color: var(--text-main); font-size: 2rem;"></h2>
-        <div style="margin-top: 40px;">
-            <button id="btn-play-again">Play Again</button>
-            <button id="btn-back-lobby" class="secondary">Leave Room</button>
+    <div id="win-view" class="overlay">
+        <div class="modal">
+            <h1 style="font-size: 4em; color: var(--primary); text-shadow: 2px 2px 0px rgba(0,0,0,0.1); margin-top: 0;">BINGO!</h1>
+            <h2 id="winner-name-display" style="color: var(--text-main); font-size: 2rem;"></h2>
+            <div style="margin-top: 40px;">
+                <button id="btn-play-again">Play Again</button>
+                <button id="btn-back-lobby" class="secondary">Leave Room</button>
+            </div>
         </div>
     </div>
 
@@ -736,15 +738,18 @@
                 createRoom: document.getElementById('create-room-view'),
                 lobby: document.getElementById('lobby-view'),
                 boardCreation: document.getElementById('board-creation-view'),
-                gameplay: document.getElementById('gameplay-view'),
-                win: document.getElementById('win-view')
+                gameplay: document.getElementById('gameplay-view')
             }
         };
 
         function showView(viewId) {
             Object.values(DOM.views).forEach(v => {
                 v.classList.remove('active-view');
-                v.style.display = ''; // Let CSS handle the hiding
+                if (v.id === 'gameplay-view') {
+                    v.style.display = 'none'; // explicitly hide gameplay
+                } else {
+                    v.style.display = ''; // Let CSS handle the hiding
+                }
             });
 
             if (viewId === 'gameplay') {
@@ -764,6 +769,9 @@
 
             if (status !== currentRoomStatus) {
                 currentRoomStatus = status;
+
+                const winModal = document.getElementById('win-view');
+                if (winModal) winModal.style.display = 'none';
 
                 if (status === 'lobby') {
                     showView('lobby');
@@ -1329,13 +1337,13 @@
         // --- 4. END GAME ---
 
         function showWinScreen() {
-            showView('win');
+            document.getElementById('win-view').style.display = 'flex';
             document.getElementById('turn-banner').classList.remove('visible');
             const winner = state.roomData.gameState.winner;
             document.getElementById('winner-name-display').innerText = `${winner} won the game!`;
 
             if (window.confetti) {
-                confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 } });
+                confetti({ particleCount: 200, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
             }
 
             document.getElementById('btn-play-again').style.display = state.isHost ? 'inline-block' : 'none';
