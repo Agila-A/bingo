@@ -9,12 +9,12 @@ TRY IT FOR FREE - [https://bingo-game-01.vercel.app/](https://bingo-silk-delta.v
 ## What is this
 
 okay so you know how bingo is super fun but like... every online version is either:
-- 💀 requires an account
-- 💀 has 47 ads
-- 💀 looks like it was designed in 2003
-- 💀 crashes when more than 2 people join
+-  requires an account
+-  has 47 ads
+-  looks like it was designed in 2003
+-  crashes when more than 2 people join
 
-yeah. **so i built my own.** it took a while. it works. mostly. 
+yeah. **so i built my own.** it took a while. it works. 
 
 I was inspired by skribble.io so I made this bingo - you create a room, send the link to your friends, everyone makes their own board, and you take turns calling numbers. no login. no nonsense. just bingo.
 
@@ -85,7 +85,7 @@ built with absolutely zero frameworks
 ```
 frontend  → vanilla HTML / CSS / JS (one single file btw)
 realtime  → Firebase Realtime Database
-hosting   → hosted on vercel - https://bingo-game-01.vercel.app/
+hosting   → hosted on vercel - https://bingo-silk-delta.vercel.app/
 confetti  → canvas-confetti 
 ```
 
@@ -103,14 +103,14 @@ confetti  → canvas-confetti
 6. open in browser
 7. play bingo
 
-that's genuinely it. no npm install. no build step. no docker. just a file.
+that's genuinely it. no build step. no docker. just a file.
 
 ---
 
 ## Bugs to be checked
 
 - if the host closes the tab mid-game, it gets a bit weird. don't do that.
-- tested on chrome
+- tested on chrome & microsft edge alone
 - if two people call a bingo at the exact same millisecond... honestly haven't tested that. let me know how it goes.
 
 ---
