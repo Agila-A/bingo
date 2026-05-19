@@ -1,6 +1,6 @@
 # 🎱 BINGO GAME
 
-TRY IT FOR FREE - [https://bingo-game-01.vercel.app/](https://bingo-silk-delta.vercel.app/)
+TRY IT FOR FREE - [vercel-deployed-link](https://bingo-silk-delta.vercel.app/)
 
 > *"i just wanted to play bingo with my friends through online and I didn't find any free website that suited my taste, so yea I made one* - what boredom does to a person
 
